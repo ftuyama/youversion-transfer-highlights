@@ -1,10 +1,13 @@
 require "uri"
 require "net/http"
 require "json"
+require 'youversion'
 
 class API
   def initialize
     @config = JSON.parse(File.read('config.json'))
+    @token = ENV['TOKEN'] || @config['token']
+    @youversion = YouVersion::Client.new({ token: @token, language: @config['language'] })
   end
 
   def create_hightlight(color, usfm)
@@ -15,7 +18,7 @@ class API
 
     request = Net::HTTP::Post.new(url)
     request["Content-Type"] = "application/json"
-    request["Authorization"] = @config['authorization']
+    request["Authorization"] = "Bearer " + @token
     request["Cookie"] = "locale=#{@config['language']}"
     request.body = JSON.dump({
       "kind": "highlight",
@@ -34,17 +37,6 @@ class API
   end
 
   def fetch_highlights(page=1)
-    url = URI("https://nodejs.bible.com/api_auth/moments/items/3.1?page=#{page}")
-
-    https = Net::HTTP.new(url.host, url.port)
-    https.use_ssl = true
-
-    request = Net::HTTP::Get.new(url)
-    request["Content-Type"] = "application/json"
-    request["Authorization"] = @config['authorization']
-    request["Cookie"] = "locale=#{@config['language']}"
-
-    response = https.request(request)
-    JSON.parse(response.read_body)
+    @youversion.moments({ "page" => page })
   end
 end
